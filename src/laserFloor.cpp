@@ -3,10 +3,6 @@
 //#define MARK_LINE printf("*** FILE: %s - LINE: %d\n", __FILE__, __LINE__)
 #define MARK_LINE
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 void init_limits(HSB_limits_t *limits) {
   limits->h_min = 0;
   limits->s_min = 5;
@@ -40,10 +36,6 @@ void get_laser_position(raspicam::RaspiCam_Cv *camera,
   AcquireFrame(camera, frame);
   DetectLaser(frame, min, max, x, y);
 }
-
-#ifdef __cplusplus
-} /* extern "C" */
-#endif
 
 int AcquireFrame(raspicam::RaspiCam_Cv *capture, cv::Mat &frame) {
   capture->grab();

@@ -11,7 +11,8 @@ MRuby::Gem::Specification.new('mruby-raspicam') do |spec|
     spec.cc.command = 'gcc' # clang does not work!
     spec.cc.flags << %w||
     spec.cc.include_paths << "/usr/local/include"
-  
+    spec.cxx.flags << "-std=c++0x -fpermissive  -fno-exceptions"
+    
     spec.linker.library_paths << "/usr/local/lib"
     spec.linker.libraries << %w[raspicam raspicam_cv opencv_features2d opencv_calib3d opencv_imgproc opencv_core]
   else

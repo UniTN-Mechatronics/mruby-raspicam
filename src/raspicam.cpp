@@ -35,15 +35,12 @@
 #include "mruby/array.h"
 #include "mruby/numeric.h"
 
+#include "laserFloor.h"
+#include "memory.h"
+
 //#define MARK_LINE printf("*** FILE: %s - LINE: %d\n", __FILE__, __LINE__)
 #define MARK_LINE
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-#include "memory.h"
-#include "laserFloor.h"
 
 // Struct holding data:
 typedef struct {
@@ -198,6 +195,10 @@ static mrb_value mrb_process_getCurrentRSS(mrb_state *mrb, mrb_value self) {
 static mrb_value mrb_process_getPeakRSS(mrb_state *mrb, mrb_value self) {
   return mrb_fixnum_value(getPeakRSS());
 }
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 void mrb_mruby_raspicam_gem_init(mrb_state *mrb) {
   struct RClass *raspicam, *process;

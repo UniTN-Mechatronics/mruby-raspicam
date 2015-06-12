@@ -12,6 +12,7 @@ end
 MRuby::Build.new do |conf|
   toolchain :gcc
   conf.gembox 'default'
+  #conf.gem :github => "take-cheeze/mruby-marshal"
   conf.gem File.dirname(__FILE__)
   conf.cc.defines = %w(ENABLE_READLINE)
 end
