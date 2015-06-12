@@ -17,6 +17,6 @@
 #                                                                         #
 #*************************************************************************#
 
-class Raspicam
-  attr_reader :hsb_min, :hsb_max
+class RaspiCam
+
 end

@@ -134,7 +134,7 @@ static mrb_value mrb_process_getPeakRSS(mrb_state *mrb, mrb_value self) {
 
 void mrb_mruby_raspicam_gem_init(mrb_state *mrb) {
   struct RClass *raspicam, *process;
-  raspicam = mrb_define_class(mrb, "Raspicam", mrb->object_class);
+  raspicam = mrb_define_class(mrb, "RaspiCam", mrb->object_class);
   mrb_define_method(mrb, raspicam, "initialize", mrb_raspicam_initialize,
                     MRB_ARGS_NONE());
   mrb_define_method(mrb, raspicam, "position", mrb_raspicam_pos,
