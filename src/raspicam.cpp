@@ -35,6 +35,9 @@
 #include "mruby/array.h"
 #include "mruby/numeric.h"
 
+//#define MARK_LINE printf("*** FILE: %s - LINE: %d\n", __FILE__, __LINE__)
+#define MARK_LINE
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -53,9 +56,9 @@ typedef struct {
 // Check it with GC.start
 static void raspicam_data_destructor(mrb_state *mrb, void *p_) {
   raspicam_data_s *pd = (raspicam_data_s *)p_;
-  delete (pd->camera);
-  delete (pd->limits);
-  free(pd);
+  delete pd->camera;
+  delete pd->limits;
+  delete pd;
   // or simply:
   // mrb_free(mrb, pd);
 };
@@ -80,17 +83,20 @@ static void mrb_raspicam_get_data(mrb_state *mrb, mrb_value self,
 static void mrb_raspicam_init(mrb_state *mrb, mrb_value self) {
   mrb_value data_value;    // this IV holds the data
   raspicam_data_s *p_data; // pointer to the C struct
-
+  mrb_value hsb_ary;
   data_value = mrb_iv_get(mrb, self, mrb_intern_lit(mrb, "@data"));
-
+  
   // if @data already exists, free its content:
   if (!mrb_nil_p(data_value)) {
     Data_Get_Struct(mrb, data_value, &raspicam_data_type, p_data);
     free(p_data);
   }
   // Allocate and zero-out the data struct:
-  p_data = (raspicam_data_s*)malloc(sizeof(raspicam_data_s));
-  memset(p_data, 0, sizeof(raspicam_data_s));
+  MARK_LINE;
+  p_data = new raspicam_data_s; //(raspicam_data_s*)malloc(sizeof(raspicam_data_s));
+  MARK_LINE;
+  
+  //memset(p_data, 0, sizeof(raspicam_data_s));
   if (!p_data)
     mrb_raise(mrb, E_RUNTIME_ERROR, "Could not allocate @data");
 
@@ -99,13 +105,31 @@ static void mrb_raspicam_init(mrb_state *mrb, mrb_value self) {
              mrb_obj_value( // with value hold in struct
                  Data_Wrap_Struct(mrb, mrb->object_class, &raspicam_data_type,
                                   p_data)));
+  MARK_LINE;
 
   // Now set values into struct:
   p_data->limits = new HSB_limits_t;
   p_data->camera = new raspicam::RaspiCam_Cv();
+  MARK_LINE;
   init_limits(p_data->limits);
-  if (!open_camera(p_data->camera))
+  hsb_ary = mrb_ary_new_capa(mrb, 3);
+  mrb_ary_set(mrb, hsb_ary, 0, mrb_fixnum_value(p_data->limits->h_min));
+  mrb_ary_set(mrb, hsb_ary, 1, mrb_fixnum_value(p_data->limits->s_min));
+  mrb_ary_set(mrb, hsb_ary, 2, mrb_fixnum_value(p_data->limits->b_min));
+  mrb_iv_set(mrb, self, mrb_intern_lit(mrb, "@hsb_min"), hsb_ary);
+  
+  hsb_ary = mrb_ary_new_capa(mrb, 3);
+  mrb_ary_set(mrb, hsb_ary, 0, mrb_fixnum_value(p_data->limits->h_max));
+  mrb_ary_set(mrb, hsb_ary, 1, mrb_fixnum_value(p_data->limits->s_max));
+  mrb_ary_set(mrb, hsb_ary, 2, mrb_fixnum_value(p_data->limits->b_max));
+  mrb_iv_set(mrb, self, mrb_intern_lit(mrb, "@hsb_max"), hsb_ary);
+  MARK_LINE;
+  
+  if (0 != open_camera(p_data->camera)) {
+    MARK_LINE;
     mrb_raise(mrb, E_RUNTIME_ERROR, "Could not open camera!");
+  }
+  MARK_LINE;
 }
 
 static mrb_value mrb_raspicam_initialize(mrb_state *mrb, mrb_value self) {
@@ -123,17 +147,18 @@ static mrb_value mrb_raspicam_pos(mrb_state *mrb, mrb_value self) {
 
   // raspicam with p_data content:
   ary = mrb_ary_new_capa(mrb, 2);
+  MARK_LINE;
   get_laser_position(p_data->camera, p_data->limits, &x, &y);
+  MARK_LINE;
   mrb_ary_set(mrb, ary, 0, mrb_fixnum_value(x));
   mrb_ary_set(mrb, ary, 1, mrb_fixnum_value(y));
+  MARK_LINE;
   return ary;
 }
 
 static mrb_value mrb_raspicam_set_HSB_min(mrb_state *mrb, mrb_value self) {
   mrb_value ary_in = mrb_nil_value();
   raspicam_data_s *p_data = NULL;
-  mrb_int i;
-  mrb_value elem;
   mrb_get_args(mrb, "A", &ary_in);
 
   // call utility for unwrapping @data into p_data:
@@ -151,8 +176,6 @@ static mrb_value mrb_raspicam_set_HSB_min(mrb_state *mrb, mrb_value self) {
 static mrb_value mrb_raspicam_set_HSB_max(mrb_state *mrb, mrb_value self) {
   mrb_value ary_in = mrb_nil_value();
   raspicam_data_s *p_data = NULL;
-  mrb_int i;
-  mrb_value elem;
   mrb_get_args(mrb, "A", &ary_in);
 
   // call utility for unwrapping @data into p_data:

@@ -1,5 +1,7 @@
 #include "laserFloor.h"
-#include <iostream>
+#include <stdio.h>
+//#define MARK_LINE printf("*** FILE: %s - LINE: %d\n", __FILE__, __LINE__)
+#define MARK_LINE
 
 #ifdef __cplusplus
 extern "C" {
@@ -15,14 +17,18 @@ void init_limits(HSB_limits_t *limits) {
 }
 
 int open_camera(raspicam::RaspiCam_Cv *camera) {
+  MARK_LINE;
   camera->set(CV_CAP_PROP_FRAME_WIDTH, 640);
+  MARK_LINE;
   camera->set(CV_CAP_PROP_FRAME_HEIGHT, 480);
+  MARK_LINE;
   // capture.set(CV_CAP_PROP_BRIGHTNESS, 50);
   // capture.set(CV_CAP_PROP_SATURATION, 80);
   // capture.set(CV_CAP_PROP_FPS, 30);
   if (!camera->open()) {
     return -1;
   }
+  MARK_LINE;
   return 0;
 }
 
@@ -51,7 +57,6 @@ int DetectLaser(cv::Mat &frame, const cv::Scalar min, const cv::Scalar max,
   cv::Mat output;
   unsigned int c = 0;
   int rows = 0, cols = 0;
-  std::cout << "frame: " << frame.rows << std::endl;
   cv::cvtColor(frame, framehsv, CV_BGR2HSV);
   rows = frame.rows, cols = frame.cols;
   cv::inRange(framehsv, min, max, output);
