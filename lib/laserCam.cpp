@@ -15,6 +15,11 @@ RaspicamLaser::RaspicamLaser() {
   camera->open();
 }
 
+RaspicamLaser::~RaspicamLaser() {
+  delete camera;
+}
+
+
 int RaspicamLaser::acquireFrame(cv::Mat &frame) {
   camera->grab();
   camera->retrieve(frame);

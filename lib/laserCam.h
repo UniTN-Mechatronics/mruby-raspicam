@@ -10,6 +10,7 @@
 class RaspicamLaser {
 public:
   RaspicamLaser();
+  ~RaspicamLaser();
   int acquireFrame(cv::Mat &frame);
   int position(int *x, int*y);
 private:
