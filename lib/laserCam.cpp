@@ -6,27 +6,32 @@
 
 
 RaspicamLaser::RaspicamLaser() {
-  camera = new raspicam::RaspiCam_Cv();
-  camera->set(CV_CAP_PROP_FRAME_WIDTH, 640);
-  camera->set(CV_CAP_PROP_FRAME_HEIGHT, 480);
+  _available = false;
+  _camera = new raspicam::RaspiCam_Cv();
+  _camera->set(CV_CAP_PROP_FRAME_WIDTH, 640);
+  _camera->set(CV_CAP_PROP_FRAME_HEIGHT, 480);
   // capture.set(CV_CAP_PROP_BRIGHTNESS, 50);
   // capture.set(CV_CAP_PROP_SATURATION, 80);
   // capture.set(CV_CAP_PROP_FPS, 30);
-  camera->open();
+  _available = _camera->open();
 }
 
 RaspicamLaser::~RaspicamLaser() {
-  delete camera;
+  delete _camera;
 }
 
 
 int RaspicamLaser::acquireFrame(cv::Mat &frame) {
-  camera->grab();
-  camera->retrieve(frame);
+  if (!_available)
+    return -1;
+  _camera->grab();
+  _camera->retrieve(frame);
   return 0;
 }
 
 int RaspicamLaser::position(int *x, int*y) {
+  if (!_available)
+    return -1;
   cv::Mat framehsv;
   cv::Mat output;
   unsigned int c = 0;
@@ -56,8 +61,12 @@ CRaspicamLaser newCRaspicamLaser() {
   return reinterpret_cast<void*>(new RaspicamLaser());
 }
 
-void delCRaspicamLaser(CRaspicamLaser laser) {
-  delete reinterpret_cast<RaspicamLaser*>(laser);
+int CRaspicamLaserAvailable(CRaspicamLaser rl) {
+  return reinterpret_cast<RaspicamLaser*>(rl)->available();
+}
+
+void delCRaspicamLaser(CRaspicamLaser rl) {
+  delete reinterpret_cast<RaspicamLaser*>(rl);
 }
 
 //

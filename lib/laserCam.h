@@ -13,8 +13,10 @@ public:
   ~RaspicamLaser();
   int acquireFrame(cv::Mat &frame);
   int position(int *x, int*y);
+  int available() {return _available ? 1 : 0;};
 private:
-  raspicam::RaspiCam_Cv *camera;
+  raspicam::RaspiCam_Cv *_camera;
+  bool _available;
 };
 
 #endif
@@ -35,6 +37,8 @@ void           delCRaspicamLaser(CRaspicamLaser rl);
 // Each public method. Takes an opaque reference to the object
 // that was returned from the above constructor plus the methods parameters.
 int CRaspicamLaserPosition(CRaspicamLaser rl, int *x, int*y);
+
+int CRaspicamLaserAvailable(CRaspicamLaser laser);
 
 #ifdef __cplusplus
 } //extern "C" {
