@@ -9,7 +9,7 @@ TARGET_LIB = lib$(TARGET_NAME).so # target lib
 SONAME = $(TARGET_LIB)
 TEST_PGM = test
 
-INCLUDES = -I/usr/local/opencv/include 
+INCLUDES = -I/usr/include/opencv -I/usr/include/opencv2
 LIB_PATHS = -L/usr/local/opencv/lib
 LIBS = -lraspicam -lraspicam_cv -lopencv_features2d -lopencv_calib3d -lopencv_ml -lopencv_video -lopencv_legacy -lopencv_objdetect -lopencv_photo -lopencv_imgproc -lopencv_core
 

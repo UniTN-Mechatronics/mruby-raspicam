@@ -69,7 +69,8 @@ static void mrb_raspicam_get_data(mrb_state *mrb, mrb_value self,
 }
 
 // Data Initializer C function (not exposed!)
-static void mrb_raspicam_init(mrb_state *mrb, mrb_value self) {
+static void mrb_raspicam_init(mrb_state *mrb, mrb_value self, mrb_int w,
+                              mrb_int h) {
   mrb_value data_value;    // this IV holds the data
   raspicam_data_s *p_data; // pointer to the C struct
   data_value = mrb_iv_get(mrb, self, mrb_intern_lit(mrb, "@data"));
@@ -93,12 +94,20 @@ static void mrb_raspicam_init(mrb_state *mrb, mrb_value self) {
                                   p_data)));
 
   // Now set values into struct:
-  p_data->camera = newCRaspicamLaser();
+  p_data->camera = newCRaspicamLaser(w, h);
 }
 
 static mrb_value mrb_raspicam_initialize(mrb_state *mrb, mrb_value self) {
+  mrb_int width, height;
+  mrb_int nargs = mrb_get_args(mrb, "|ii", &width, &height);
+  if (nargs == 0) {
+    width = 640;
+    height = 480;
+  } else if (nargs == 1) {
+    height = (mrb_int)((width / 640.0) * 480.0);
+  }
   // Call strcut initializer:
-  mrb_raspicam_init(mrb, self);
+  mrb_raspicam_init(mrb, self, width, height);
   return mrb_nil_value();
 }
 
@@ -126,7 +135,8 @@ static mrb_value mrb_raspicam_save(mrb_state *mrb, mrb_value self) {
   mrb_raspicam_get_data(mrb, self, &p_data);
 
   // raspicam with p_data content:
-  CRaspicamLaserSaveFrame(p_data->camera, mrb_string_value_cstr(mrb, &name), slp);
+  CRaspicamLaserSaveFrame(p_data->camera, mrb_string_value_cstr(mrb, &name),
+                          slp);
   return name;
 }
 

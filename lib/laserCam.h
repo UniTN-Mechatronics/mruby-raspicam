@@ -7,10 +7,11 @@
 
 class RaspicamLaser {
 public:
-  RaspicamLaser();
+  RaspicamLaser(int width = 640, int height = 480);
   ~RaspicamLaser();
   int acquireFrame(cv::Mat &frame);
   int position(int *x, int*y);
+  void setFrameSize(int width, int height);
   void saveFrame(std::string &name, int slp);
   int available() {return _available && _camera->isOpened() ? 1 : 0;};
 private:
@@ -29,7 +30,7 @@ extern "C" {
 #endif
 //
 // Need an explicit constructor and destructor.
-CRaspicamLaser newCRaspicamLaser();
+CRaspicamLaser newCRaspicamLaser(int width, int height);
 void           delCRaspicamLaser(CRaspicamLaser rl);
 
 //
@@ -37,7 +38,9 @@ void           delCRaspicamLaser(CRaspicamLaser rl);
 // that was returned from the above constructor plus the methods parameters.
 int CRaspicamLaserPosition(CRaspicamLaser rl, int *x, int*y);
 
-int CRaspicamLaserAvailable(CRaspicamLaser laser);
+void CRaspicamLaserSetFrameSize(CRaspicamLaser rl, int width, int height);
+  
+int CRaspicamLaserAvailable(CRaspicamLaser rl);
 
 void CRaspicamLaserSaveFrame(CRaspicamLaser rl, const char *cname, int slp);
 
