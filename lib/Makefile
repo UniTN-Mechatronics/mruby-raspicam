@@ -1,7 +1,8 @@
 CC = gcc # C compiler
+CPP = g++ # C compiler
 CFLAGS = -fPIC -Wall -g # C flags
 DEFINES =  -D RASPICAM
-LDFLAGS = -shared  # linking flags
+LDFLAGS = -shared # linking flags
 RM = rm -f  # rm command
 TARGET_LIB = libLaserCam.so # target lib
 SONAME = $(TARGET_LIB)
@@ -16,17 +17,22 @@ OBJS = $(SRCS:.cpp=.o)
 .PHONY: all
 all: ${TARGET_LIB}
  
+$(SRCS:.cpp):%.cpp
+	$(CPP) $(DEFINES) $(INCLUDES) $(CFLAGS) -MM $<
+ 
+$(SRCS:.c):%.c
+	$(CC) $(DEFINES) $(INCLUDES) $(CFLAGS) -MM $<
+ 
 $(TARGET_LIB): $(OBJS)
-	$(CC) $(LIB_PATHS) $(LIBS) ${LDFLAGS} -o $@ $^
- 
-$(SRCS:.cpp=.d):%.d:%.cpp
-	$(CC) $(DEFINES) $(INCLUDES) $(CFLAGS) -MM $< >$@
- 
-include $(SRCS:.cpp=.d)
- 
+	$(CC)  ${LDFLAGS} $(LIB_PATHS) $(LIBS) -o $@ $^
+  
 .PHONY: clean
 clean:
-	-${RM} ${TARGET_LIB} ${OBJS} $(SRCS:.cpp=.d)
+	-${RM} ${OBJS}
+	
+.PHONY: clobber
+clobber:
+	-${RM} ${OBJS} ${TARGET_LIB}
 	
 .PHONY: install
 install: ${TARGET_LIB}
