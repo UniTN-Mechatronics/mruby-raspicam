@@ -10,8 +10,10 @@ int main (int argc, char const *argv[])
     printf("*** Camera not available!\n");
     return -1;
   }
-  if (0 == CRaspicamLaserPosition(rcl, &x, &y))
-    printf("x=%d, y=%d", x, y);
+  if (0 == CRaspicamLaserPosition(rcl, &x, &y)) {
+    printf("x=%d, y=%d\n", x, y);
+    CRaspicamLaserSaveFrame(rcl, "./test.jpg", 0);
+  }
   else
     printf("*** Error reading from camera!\n");
   return 0;

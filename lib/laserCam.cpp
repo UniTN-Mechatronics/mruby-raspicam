@@ -1,9 +1,14 @@
-#include "laserCam.h"
+#include <ctime>
+#include <fstream>
 #include <stdio.h>
+#include <opencv2/opencv.hpp>
+#include <raspicam/raspicam_cv.h>
+#include <raspicam/raspicam.h>
+
+#include "laserCam.h"
 
 //#define MARK_LINE printf("*** FILE: %s - LINE: %d\n", __FILE__, __LINE__)
 #define MARK_LINE
-
 
 RaspicamLaser::RaspicamLaser() {
   _available = false;
@@ -16,10 +21,19 @@ RaspicamLaser::RaspicamLaser() {
   _available = _camera->open();
 }
 
-RaspicamLaser::~RaspicamLaser() {
-  delete _camera;
+RaspicamLaser::~RaspicamLaser() { 
+  _camera->release();
+  delete _camera; 
 }
 
+void RaspicamLaser::saveFrame(std::string &name, int slp) {
+  if (slp > 0)
+    sleep(slp);
+  cv::Mat frame;
+  acquireFrame(frame);  
+  // save
+  imwrite(name, frame);
+}
 
 int RaspicamLaser::acquireFrame(cv::Mat &frame) {
   if (!_available)
@@ -29,7 +43,7 @@ int RaspicamLaser::acquireFrame(cv::Mat &frame) {
   return 0;
 }
 
-int RaspicamLaser::position(int *x, int*y) {
+int RaspicamLaser::position(int *x, int *y) {
   if (!_available)
     return -1;
   cv::Mat framehsv;
@@ -39,7 +53,7 @@ int RaspicamLaser::position(int *x, int*y) {
   cv::Scalar min(0, 5, 180);
   cv::Scalar max(15, 70, 240);
   cv::Mat frame;
-  
+
   acquireFrame(frame);
   cv::cvtColor(frame, framehsv, CV_BGR2HSV);
   rows = frame.rows, cols = frame.cols;
@@ -56,23 +70,26 @@ int RaspicamLaser::position(int *x, int*y) {
   return 0;
 }
 
-
 CRaspicamLaser newCRaspicamLaser() {
-  return reinterpret_cast<void*>(new RaspicamLaser());
+  return reinterpret_cast<void *>(new RaspicamLaser());
 }
 
 int CRaspicamLaserAvailable(CRaspicamLaser rl) {
-  return reinterpret_cast<RaspicamLaser*>(rl)->available();
+  return reinterpret_cast<RaspicamLaser *>(rl)->available();
+}
+
+void CRaspicamLaserSaveFrame(CRaspicamLaser rl, const char *cname, int slp) {
+  std::string name = cname;
+  return reinterpret_cast<RaspicamLaser *>(rl)->saveFrame(name, slp);
 }
 
 void delCRaspicamLaser(CRaspicamLaser rl) {
-  delete reinterpret_cast<RaspicamLaser*>(rl);
+  delete reinterpret_cast<RaspicamLaser *>(rl);
 }
 
 //
 // Each public method. Takes an opaque reference to the object
 // that was returned from the above constructor plus the methods parameters.
-int CRaspicamLaserPosition(CRaspicamLaser rl, int *x, int*y) {
-  return reinterpret_cast<RaspicamLaser*>(rl)->position(x, y);
+int CRaspicamLaserPosition(CRaspicamLaser rl, int *x, int *y) {
+  return reinterpret_cast<RaspicamLaser *>(rl)->position(x, y);
 }
-

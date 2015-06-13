@@ -1,8 +1,6 @@
 
 #ifdef __cplusplus
 
-#include <opencv2/opencv.hpp>
-#include <raspicam/raspicam_cv.h>
 #include <stdlib.h>
 #define _WHITE 255
 #define _SCALE 255
@@ -13,7 +11,8 @@ public:
   ~RaspicamLaser();
   int acquireFrame(cv::Mat &frame);
   int position(int *x, int*y);
-  int available() {return _available ? 1 : 0;};
+  void saveFrame(std::string &name, int slp);
+  int available() {return _available && _camera->isOpened() ? 1 : 0;};
 private:
   raspicam::RaspiCam_Cv *_camera;
   bool _available;
@@ -39,6 +38,8 @@ void           delCRaspicamLaser(CRaspicamLaser rl);
 int CRaspicamLaserPosition(CRaspicamLaser rl, int *x, int*y);
 
 int CRaspicamLaserAvailable(CRaspicamLaser laser);
+
+void CRaspicamLaserSaveFrame(CRaspicamLaser rl, const char *cname, int slp);
 
 #ifdef __cplusplus
 } //extern "C" {

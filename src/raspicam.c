@@ -38,11 +38,8 @@
 //#define MARK_LINE printf("*** FILE: %s - LINE: %d\n", __FILE__, __LINE__)
 #define MARK_LINE
 
-
 // Struct holding data:
-typedef struct {
-  CRaspicamLaser camera;
-} raspicam_data_s;
+typedef struct { CRaspicamLaser camera; } raspicam_data_s;
 
 // Garbage collector handler, for raspicam_data struct
 // if raspicam_data contains other dynamic data, free it too!
@@ -76,16 +73,16 @@ static void mrb_raspicam_init(mrb_state *mrb, mrb_value self) {
   mrb_value data_value;    // this IV holds the data
   raspicam_data_s *p_data; // pointer to the C struct
   data_value = mrb_iv_get(mrb, self, mrb_intern_lit(mrb, "@data"));
-  
+
   // if @data already exists, free its content:
   if (!mrb_nil_p(data_value)) {
     Data_Get_Struct(mrb, data_value, &raspicam_data_type, p_data);
     free(p_data);
   }
   // Allocate and zero-out the data struct:
-  p_data = (raspicam_data_s*)malloc(sizeof(raspicam_data_s));
-  
-  //memset(p_data, 0, sizeof(raspicam_data_s));
+  p_data = (raspicam_data_s *)malloc(sizeof(raspicam_data_s));
+
+  // memset(p_data, 0, sizeof(raspicam_data_s));
   if (!p_data)
     mrb_raise(mrb, E_RUNTIME_ERROR, "Could not allocate @data");
 
@@ -120,7 +117,18 @@ static mrb_value mrb_raspicam_pos(mrb_state *mrb, mrb_value self) {
   return ary;
 }
 
+static mrb_value mrb_raspicam_save(mrb_state *mrb, mrb_value self) {
+  raspicam_data_s *p_data = NULL;
+  mrb_value name;
+  mrb_int slp = 0;
+  mrb_get_args(mrb, "S|i", &name, &slp);
+  // call utility for unwrapping @data into p_data:
+  mrb_raspicam_get_data(mrb, self, &p_data);
 
+  // raspicam with p_data content:
+  CRaspicamLaserSaveFrame(p_data->camera, mrb_string_value_cstr(mrb, &name), slp);
+  return name;
+}
 
 /* MEMORY INFO */
 static mrb_value mrb_process_getCurrentRSS(mrb_state *mrb, mrb_value self) {
@@ -131,7 +139,6 @@ static mrb_value mrb_process_getPeakRSS(mrb_state *mrb, mrb_value self) {
   return mrb_fixnum_value(getPeakRSS());
 }
 
-
 void mrb_mruby_raspicam_gem_init(mrb_state *mrb) {
   struct RClass *raspicam, *process;
   raspicam = mrb_define_class(mrb, "RaspiCam", mrb->object_class);
@@ -139,7 +146,8 @@ void mrb_mruby_raspicam_gem_init(mrb_state *mrb) {
                     MRB_ARGS_NONE());
   mrb_define_method(mrb, raspicam, "position", mrb_raspicam_pos,
                     MRB_ARGS_NONE());
-
+  mrb_define_method(mrb, raspicam, "save_image", mrb_raspicam_save,
+                    MRB_ARGS_REQ(1) & MRB_ARGS_OPT(1));
 
   process = mrb_define_module(mrb, "ProcessInfo");
   mrb_const_set(mrb, mrb_obj_value(process), mrb_intern_lit(mrb, "PID"),
@@ -154,6 +162,3 @@ void mrb_mruby_raspicam_gem_init(mrb_state *mrb) {
 }
 
 void mrb_mruby_raspicam_gem_final(mrb_state *mrb) {}
-
-
-
