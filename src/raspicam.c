@@ -36,6 +36,7 @@
 
 //#define MARK_LINE printf("*** FILE: %s - LINE: %d\n", __FILE__, __LINE__)
 #define MARK_LINE
+#define E_RASPICAM_ERROR (mrb_class_get(mrb, "RaspicamError"))
 
 // Struct holding data:
 typedef struct { CRaspicamLaser camera; } raspicam_data_s;
@@ -161,7 +162,7 @@ static mrb_value mrb_raspicam_pos(mrb_state *mrb, mrb_value self) {
   ary = mrb_ary_new_capa(mrb, 2);
   res = CRaspicamLaserPosition(p_data->camera, &x, &y);
   if (0 != res)
-    mrb_raise(mrb, E_RUNTIME_ERROR, "Could not get position (device closed?)");
+    mrb_raise(mrb, E_RASPICAM_ERROR, "Could not get position (device closed?)");
   mrb_ary_set(mrb, ary, 0, mrb_fixnum_value(x));
   mrb_ary_set(mrb, ary, 1, mrb_fixnum_value(y));
   return ary;
@@ -180,13 +181,15 @@ static mrb_value mrb_raspicam_save(mrb_state *mrb, mrb_value self) {
   // raspicam with p_data content:
   if (0 != CRaspicamLaserSaveFrame(p_data->camera,
                                    mrb_string_value_cstr(mrb, &name), slp))
-    mrb_raise(mrb, E_RUNTIME_ERROR, "Could not save image (device closed?");
+    mrb_raise(mrb, E_RASPICAM_ERROR, "Could not save image (device closed?");
   return name;
 }
 
 void mrb_mruby_raspicam_gem_init(mrb_state *mrb) {
-  struct RClass *raspicam;
+  struct RClass *raspicam, *exc;
+  exc = mrb_define_class(mrb, "RaspicamError", mrb_class_get(mrb, "Exception"));
   raspicam = mrb_define_class(mrb, "RaspiCam", mrb->object_class);
+  
   mrb_define_method(mrb, raspicam, "initialize", mrb_raspicam_initialize,
                     MRB_ARGS_OPT(2));
   mrb_define_method(mrb, raspicam, "open", mrb_raspicam_open, MRB_ARGS_NONE());
