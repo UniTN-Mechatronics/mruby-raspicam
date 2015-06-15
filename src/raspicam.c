@@ -127,16 +127,40 @@ static mrb_value mrb_raspicam_close(mrb_state *mrb, mrb_value self) {
   return mrb_nil_value();
 }
 
+static mrb_value mrb_raspicam_red_thr(mrb_state *mrb, mrb_value self) {
+  unsigned int thr;
+  raspicam_data_s *p_data = NULL;
+  mrb_raspicam_get_data(mrb, self, &p_data);
+
+  // raspicam with p_data content:
+  thr = CRaspicamLaserRedThreshold(p_data->camera);
+  return mrb_fixnum_value((mrb_int)thr);
+}
+
+static mrb_value mrb_raspicam_set_red_thr(mrb_state *mrb, mrb_value self) {
+  raspicam_data_s *p_data = NULL;
+  mrb_int val;
+  mrb_get_args(mrb, "i", &val);
+  // call utility for unwrapping @data into p_data:
+  mrb_raspicam_get_data(mrb, self, &p_data);
+
+  // raspicam with p_data content:
+  CRaspicamLaserSetRedThreshold(p_data->camera, val);
+  return mrb_fixnum_value(val);
+}
+
+
 static mrb_value mrb_raspicam_pos(mrb_state *mrb, mrb_value self) {
   raspicam_data_s *p_data = NULL;
   mrb_value ary;
-  int x = 0, y = 0;
+  int x = 0, y = 0, res;
   // call utility for unwrapping @data into p_data:
   mrb_raspicam_get_data(mrb, self, &p_data);
 
   // raspicam with p_data content:
   ary = mrb_ary_new_capa(mrb, 2);
-  if (0 != CRaspicamLaserPosition(p_data->camera, &x, &y))
+  res = CRaspicamLaserPosition(p_data->camera, &x, &y);
+  if (0 != res)
     mrb_raise(mrb, E_RUNTIME_ERROR, "Could not get position (device closed?)");
   mrb_ary_set(mrb, ary, 0, mrb_fixnum_value(x));
   mrb_ary_set(mrb, ary, 1, mrb_fixnum_value(y));
@@ -146,8 +170,10 @@ static mrb_value mrb_raspicam_pos(mrb_state *mrb, mrb_value self) {
 static mrb_value mrb_raspicam_save(mrb_state *mrb, mrb_value self) {
   raspicam_data_s *p_data = NULL;
   mrb_value name;
-  mrb_int slp = 0;
-  mrb_get_args(mrb, "S|i", &name, &slp);
+  mrb_int slp = 0, nargs;
+  nargs = mrb_get_args(mrb, "S|i", &name, &slp);
+  if (nargs == 1)
+    slp = 0;
   // call utility for unwrapping @data into p_data:
   mrb_raspicam_get_data(mrb, self, &p_data);
 
@@ -166,6 +192,10 @@ void mrb_mruby_raspicam_gem_init(mrb_state *mrb) {
   mrb_define_method(mrb, raspicam, "open", mrb_raspicam_open, MRB_ARGS_NONE());
   mrb_define_method(mrb, raspicam, "close", mrb_raspicam_close,
                     MRB_ARGS_NONE());
+  mrb_define_method(mrb, raspicam, "red_threshold", mrb_raspicam_red_thr,
+                    MRB_ARGS_NONE());
+  mrb_define_method(mrb, raspicam, "red_threshold=", mrb_raspicam_set_red_thr,
+                    MRB_ARGS_REQ(1));
   mrb_define_method(mrb, raspicam, "position", mrb_raspicam_pos,
                     MRB_ARGS_NONE());
   mrb_define_method(mrb, raspicam, "save_image", mrb_raspicam_save,

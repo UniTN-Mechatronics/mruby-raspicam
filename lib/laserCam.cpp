@@ -14,10 +14,8 @@
 RaspicamLaser::RaspicamLaser(int width, int height) {
   _available = false;
   _camera = new raspicam::RaspiCam_Cv();
+  _red_thr = 230;
   setFrameSize(width, height);
-  // capture.set(CV_CAP_PROP_BRIGHTNESS, 50);
-  // capture.set(CV_CAP_PROP_SATURATION, 80);
-  // capture.set(CV_CAP_PROP_FPS, 30);
 }
 
 RaspicamLaser::~RaspicamLaser() {
@@ -36,53 +34,65 @@ void RaspicamLaser::closeCamera() {
 }
 
 void RaspicamLaser::setFrameSize(int width, int height) {
+  // _camera.set(CV_CAP_PROP_BRIGHTNESS, 50);
+  // _camera.set(CV_CAP_PROP_GAIN, 50);
+  // _camera.set(CV_CAP_PROP_EXPOSURE, 80);
+  
   _camera->set(CV_CAP_PROP_FRAME_WIDTH, width);
   _camera->set(CV_CAP_PROP_FRAME_HEIGHT, height);
 }
 
-bool RaspicamLaser::saveFrame(std::string &name, int slp) {
+bool RaspicamLaser::saveFrame(std::string &name) {
+  imwrite(name, _lastFrame);
+  return true;
+}
+
+bool RaspicamLaser::acquireFrame(int slp) {
+  if (!_available)
+    return false;
   if (slp > 0)
     sleep(slp);
-  cv::Mat frame;
-  if (!acquireFrame(frame))
-    return false;
-  // save
-  imwrite(name, frame);
-  return true;
-}
-
-bool RaspicamLaser::acquireFrame(cv::Mat &frame) {
-  if (!_available)
-    return false;
   _camera->grab();
-  _camera->retrieve(frame);
+  _camera->retrieve(_lastFrame);
   return true;
 }
 
-bool RaspicamLaser::position(int *x, int *y) {
+bool RaspicamLaser::position(int *x, int *y, int slp) {
   if (!_available)
     return false;
-  cv::Mat framehsv;
-  cv::Mat output;
-  unsigned int c = 0;
-  int rows = 0, cols = 0;
-  cv::Scalar min(0, 5, 180);
-  cv::Scalar max(15, 70, 240);
-  cv::Mat frame;
+  const unsigned int RED = 2;
+  unsigned int colors[3];
+  unsigned int *c = colors;
+  int SCALE = 255;
+  int cont = 0;
+  cv::Mat frameOriginalSubROI;
+  cv::Mat channels[3];
+  cv::Point pMaxR;
+  cv::Vec3b intensity;
 
-  acquireFrame(frame);
-  cv::cvtColor(frame, framehsv, CV_BGR2HSV);
-  rows = frame.rows, cols = frame.cols;
-  cv::inRange(framehsv, min, max, output);
-  for (register int i = 0; i < rows; i++) {
-    for (register int k = 0; k < cols; k++) {
-      c = static_cast<int>(output.at<uchar>(i, k));
-      if (c == _WHITE) {
-        *x = (k - cols / 2) * _SCALE / cols;
-        *y = (rows / 2 - i) * _SCALE / rows;
-      }
+  // Get frame
+  acquireFrame(slp);
+  *x = -1;
+  *y = -1;
+  for (register int k = 0; k < _lastFrame.rows; k++) {
+    frameOriginalSubROI = _lastFrame(cv::Rect(0, k, _lastFrame.cols, 1));
+    cv::split(frameOriginalSubROI, channels);
+    cv::minMaxLoc(channels[RED], NULL, NULL, NULL, &pMaxR);
+    intensity = frameOriginalSubROI.at<cv::Vec3b>(pMaxR.y, pMaxR.x);
+    *(c) = static_cast<int>(intensity.val[0]);
+    *(c + 1) = static_cast<int>(intensity.val[1]);
+    *(c + 2) = static_cast<int>(intensity.val[2]);
+    if (*(c + 2) > _red_thr && *(c) < *(c + 2) - 15 &&
+        *(c + 1) < *(c + 2) - 20) {
+      cv::Point laser(pMaxR.x, cont);
+      cv::circle(_lastFrame, laser, 50, cv::Scalar(0, 255, 0));
+      *x = (pMaxR.x) * SCALE / _lastFrame.cols;
+      *y = (_lastFrame.rows - cont) * SCALE / _lastFrame.rows;
     }
+    cont++;
   }
+  if (*x == -1 || *y == -1)
+    return false;
   return true;
 }
 
@@ -92,14 +102,16 @@ bool RaspicamLaser::position(int *x, int *y) {
 
 
 
+
+
 #pragma mark -
 /*
-              ____   ___       _             __                
-             / ___| |_ _|_ __ | |_ ___ _ __ / _| __ _  ___ ___ 
+              ____   ___       _             __
+             / ___| |_ _|_ __ | |_ ___ _ __ / _| __ _  ___ ___
             | |      | || '_ \| __/ _ \ '__| |_ / _` |/ __/ _ \
             | |___   | || | | | ||  __/ |  |  _| (_| | (_|  __/
              \____| |___|_| |_|\__\___|_|  |_|  \__,_|\___\___|
-                                                               
+
 */
 #define RASPICAM_CLASS(o) reinterpret_cast<RaspicamLaser *>(o)
 
@@ -107,9 +119,7 @@ CRaspicamLaser newCRaspicamLaser(int width, int height) {
   return reinterpret_cast<void *>(new RaspicamLaser(width, height));
 }
 
-void delCRaspicamLaser(CRaspicamLaser rl) {
-  delete RASPICAM_CLASS(rl);
-}
+void delCRaspicamLaser(CRaspicamLaser rl) { delete RASPICAM_CLASS(rl); }
 
 //
 // Each public method. Takes an opaque reference to the object
@@ -134,6 +144,17 @@ void CRaspicamLaserSetFrameSize(CRaspicamLaser rl, int width, int height) {
   RASPICAM_CLASS(rl)->setFrameSize(width, height);
 }
 
+unsigned int CRaspicamLaserRedThreshold(CRaspicamLaser rl) {
+  return RASPICAM_CLASS(rl)->red_threshold();
+}
+
+
+void CRaspicamLaserSetRedThreshold(CRaspicamLaser rl, unsigned int thr) {
+  RASPICAM_CLASS(rl)->set_red_threshold(thr);
+}
+
+
+
 int CRaspicamLaserSaveFrame(CRaspicamLaser rl, const char *cname, int slp) {
   // if (!RASPICAM_CLASS(rl)->available())
   //   return -1;
@@ -141,5 +162,7 @@ int CRaspicamLaserSaveFrame(CRaspicamLaser rl, const char *cname, int slp) {
   // RASPICAM_CLASS(rl)->saveFrame(name, slp);
   // return 0;
   std::string name = cname;
-  return RASPICAM_CLASS(rl)->saveFrame(name, slp) ? 0 : -1;
+  int x = 0, y = 0;
+  RASPICAM_CLASS(rl)->position(&x, &y, slp);
+  return RASPICAM_CLASS(rl)->saveFrame(name) ? 0 : -1;
 }

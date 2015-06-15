@@ -11,13 +11,17 @@ public:
   ~RaspicamLaser();
   bool openCamera();
   void closeCamera();
-  bool acquireFrame(cv::Mat &frame);
-  bool position(int *x, int*y);
+  bool acquireFrame(int slp);
+  bool position(int *x, int*y, int slp = 0);
   void setFrameSize(int width, int height);
-  bool saveFrame(std::string &name, int slp);
+  unsigned int red_threshold() {return _red_thr;};
+  void set_red_threshold(unsigned int v) {_red_thr = v;};
+  bool saveFrame(std::string &name);
   bool available() {return _available && _camera->isOpened();};
 private:
+  unsigned int _red_thr;
   raspicam::RaspiCam_Cv *_camera;
+  cv::Mat _lastFrame;
   bool _available;
 };
 
@@ -44,7 +48,10 @@ void CRaspicamLaserCloseCamera(CRaspicamLaser rl);
 int CRaspicamLaserPosition(CRaspicamLaser rl, int *x, int*y);
 
 void CRaspicamLaserSetFrameSize(CRaspicamLaser rl, int width, int height);
-  
+
+unsigned int CRaspicamLaserRedThreshold(CRaspicamLaser rl);
+void CRaspicamLaserSetRedThreshold(CRaspicamLaser rl, unsigned int thr);
+
 int CRaspicamLaserAvailable(CRaspicamLaser rl);
 
 int CRaspicamLaserSaveFrame(CRaspicamLaser rl, const char *cname, int slp);
