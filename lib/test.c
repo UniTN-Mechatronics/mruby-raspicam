@@ -15,14 +15,13 @@ int main (int argc, char const *argv[])
     printf("*** Camera not available!\n");
     return -1;
   }
-  if (0 == CRaspicamLaserPosition(rcl, &x, &y)) {
-    printf("x=%d, y=%d\n", x, y);
-    CRaspicamLaserSetFrameSize(rcl, 1280, 1024);
-    CRaspicamLaserSaveFrame(rcl, argv[1], 2);
-    printf("Saved image %s\n", argv[1]);
-  }
-  else
+  if (0 != CRaspicamLaserPosition(rcl, &x, &y)) {
     printf("*** Error reading from camera!\n");
+    return -2;
+  }
+  printf("x=%d, y=%d\n", x, y);
+  CRaspicamLaserSaveFrame(rcl, argv[1], 2);
+  printf("Saved image %s\n", argv[1]);
   CRaspicamLaserCloseCamera(rcl);
   return 0;
 }

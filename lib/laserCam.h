@@ -11,10 +11,10 @@ public:
   ~RaspicamLaser();
   bool openCamera();
   void closeCamera();
-  int acquireFrame(cv::Mat &frame);
-  int position(int *x, int*y);
+  bool acquireFrame(cv::Mat &frame);
+  bool position(int *x, int*y);
   void setFrameSize(int width, int height);
-  void saveFrame(std::string &name, int slp);
+  bool saveFrame(std::string &name, int slp);
   bool available() {return _available && _camera->isOpened();};
 private:
   raspicam::RaspiCam_Cv *_camera;

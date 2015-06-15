@@ -1,8 +1,8 @@
 /***************************************************************************/
 /*                                                                         */
 /* raspicam.c - mruby testing                                              */
-/* Copyright (C) 2015 Paolo Bosetti and Matteo Ragni,                      */
-/* paolo[dot]bosetti[at]unitn.it and matteo[dot]ragni[at]unitn.it          */
+/* Copyright (C) 2015 Paolo Bosetti,                                       */
+/* paolo[dot]bosetti[at]unitn.it                                           */
 /* Department of Industrial Engineering, University of Trento              */
 /*                                                                         */
 /* This library is free software.  You can redistribute it and/or          */
@@ -33,7 +33,6 @@
 #include "mruby/numeric.h"
 
 #include "laserCam.h"
-#include "memory.h"
 
 //#define MARK_LINE printf("*** FILE: %s - LINE: %d\n", __FILE__, __LINE__)
 #define MARK_LINE
@@ -115,7 +114,8 @@ static mrb_value mrb_raspicam_open(mrb_state *mrb, mrb_value self) {
   raspicam_data_s *p_data = NULL;
   // call utility for unwrapping @data into p_data:
   mrb_raspicam_get_data(mrb, self, &p_data);
-  CRaspicamLaserOpenCamera(p_data->camera);
+  if (0 != CRaspicamLaserOpenCamera(p_data->camera))
+    mrb_raise(mrb, E_RUNTIME_ERROR, "Could not open camera!");
   return self;
 }
 
@@ -136,7 +136,8 @@ static mrb_value mrb_raspicam_pos(mrb_state *mrb, mrb_value self) {
 
   // raspicam with p_data content:
   ary = mrb_ary_new_capa(mrb, 2);
-  CRaspicamLaserPosition(p_data->camera, &x, &y);
+  if (0 != CRaspicamLaserPosition(p_data->camera, &x, &y))
+    mrb_raise(mrb, E_RUNTIME_ERROR, "Could not get position (device closed?)");
   mrb_ary_set(mrb, ary, 0, mrb_fixnum_value(x));
   mrb_ary_set(mrb, ary, 1, mrb_fixnum_value(y));
   return ary;
@@ -153,25 +154,15 @@ static mrb_value mrb_raspicam_save(mrb_state *mrb, mrb_value self) {
   // raspicam with p_data content:
   if (0 != CRaspicamLaserSaveFrame(p_data->camera,
                                    mrb_string_value_cstr(mrb, &name), slp))
-    return mrb_nil_value();
-  else
-    return name;
-}
-
-/* MEMORY INFO */
-static mrb_value mrb_process_getCurrentRSS(mrb_state *mrb, mrb_value self) {
-  return mrb_fixnum_value(getCurrentRSS());
-}
-
-static mrb_value mrb_process_getPeakRSS(mrb_state *mrb, mrb_value self) {
-  return mrb_fixnum_value(getPeakRSS());
+    mrb_raise(mrb, E_RUNTIME_ERROR, "Could not save image (device closed?");
+  return name;
 }
 
 void mrb_mruby_raspicam_gem_init(mrb_state *mrb) {
-  struct RClass *raspicam, *process;
+  struct RClass *raspicam;
   raspicam = mrb_define_class(mrb, "RaspiCam", mrb->object_class);
   mrb_define_method(mrb, raspicam, "initialize", mrb_raspicam_initialize,
-                    MRB_ARGS_NONE());
+                    MRB_ARGS_OPT(2));
   mrb_define_method(mrb, raspicam, "open", mrb_raspicam_open, MRB_ARGS_NONE());
   mrb_define_method(mrb, raspicam, "close", mrb_raspicam_close,
                     MRB_ARGS_NONE());
@@ -179,17 +170,6 @@ void mrb_mruby_raspicam_gem_init(mrb_state *mrb) {
                     MRB_ARGS_NONE());
   mrb_define_method(mrb, raspicam, "save_image", mrb_raspicam_save,
                     MRB_ARGS_REQ(1) & MRB_ARGS_OPT(1));
-
-  process = mrb_define_module(mrb, "ProcessInfo");
-  mrb_const_set(mrb, mrb_obj_value(process), mrb_intern_lit(mrb, "PID"),
-                mrb_fixnum_value(getpid()));
-  mrb_const_set(mrb, mrb_obj_value(process), mrb_intern_lit(mrb, "PPID"),
-                mrb_fixnum_value(getppid()));
-
-  mrb_define_class_method(mrb, process, "current_mem",
-                          mrb_process_getCurrentRSS, MRB_ARGS_NONE());
-  mrb_define_class_method(mrb, process, "peak_mem", mrb_process_getPeakRSS,
-                          MRB_ARGS_NONE());
 }
 
 void mrb_mruby_raspicam_gem_final(mrb_state *mrb) {}

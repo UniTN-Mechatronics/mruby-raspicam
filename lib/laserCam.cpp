@@ -31,6 +31,7 @@ bool RaspicamLaser::openCamera() {
 }
 
 void RaspicamLaser::closeCamera() {
+  _available = false;
   _camera->release();
 }
 
@@ -39,26 +40,28 @@ void RaspicamLaser::setFrameSize(int width, int height) {
   _camera->set(CV_CAP_PROP_FRAME_HEIGHT, height);
 }
 
-void RaspicamLaser::saveFrame(std::string &name, int slp) {
+bool RaspicamLaser::saveFrame(std::string &name, int slp) {
   if (slp > 0)
     sleep(slp);
   cv::Mat frame;
-  acquireFrame(frame);
+  if (!acquireFrame(frame))
+    return false;
   // save
   imwrite(name, frame);
+  return true;
 }
 
-int RaspicamLaser::acquireFrame(cv::Mat &frame) {
+bool RaspicamLaser::acquireFrame(cv::Mat &frame) {
   if (!_available)
-    return -1;
+    return false;
   _camera->grab();
   _camera->retrieve(frame);
-  return 0;
+  return true;
 }
 
-int RaspicamLaser::position(int *x, int *y) {
+bool RaspicamLaser::position(int *x, int *y) {
   if (!_available)
-    return -1;
+    return false;
   cv::Mat framehsv;
   cv::Mat output;
   unsigned int c = 0;
@@ -80,7 +83,7 @@ int RaspicamLaser::position(int *x, int *y) {
       }
     }
   }
-  return 0;
+  return true;
 }
 
 #endif
@@ -120,7 +123,7 @@ void CRaspicamLaserCloseCamera(CRaspicamLaser rl) {
 }
 
 int CRaspicamLaserPosition(CRaspicamLaser rl, int *x, int *y) {
-  return RASPICAM_CLASS(rl)->position(x, y);
+  return RASPICAM_CLASS(rl)->position(x, y) ? 0 : -1;
 }
 
 int CRaspicamLaserAvailable(CRaspicamLaser rl) {
@@ -132,9 +135,11 @@ void CRaspicamLaserSetFrameSize(CRaspicamLaser rl, int width, int height) {
 }
 
 int CRaspicamLaserSaveFrame(CRaspicamLaser rl, const char *cname, int slp) {
-  if (!RASPICAM_CLASS(rl)->available())
-    return -1;
+  // if (!RASPICAM_CLASS(rl)->available())
+  //   return -1;
+  // std::string name = cname;
+  // RASPICAM_CLASS(rl)->saveFrame(name, slp);
+  // return 0;
   std::string name = cname;
-  RASPICAM_CLASS(rl)->saveFrame(name, slp);
-  return 0;
+  return RASPICAM_CLASS(rl)->saveFrame(name, slp) ? 0 : -1;
 }
