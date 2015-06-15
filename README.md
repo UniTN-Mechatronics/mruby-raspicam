@@ -5,8 +5,10 @@ mruby gem for accessing Raspberry Camera.
 At the moment, the camera grabs a snapshot and returns the coordinates of the red dot in the frame (if any):
 
 ```ruby
-r = RaspiCam.new
+r = RaspiCam.new(1024).open
 p r.position #=> [123, 117]
+r.save_image "test.jpg"
+r.close
 ```
 
 ## Building
@@ -21,4 +23,4 @@ cd ..
 ./run_test.rb
 ```
 
-Note that `make install` only installs the shared libraru `/usr/local/lib/libLaserCam.so`, _and not the header files_, which remain under `lib`.
+Note that `make install` only installs the shared library `/usr/local/lib/libLaserCam.so`, _and not the header files_, which remain under `lib`.

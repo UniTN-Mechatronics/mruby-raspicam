@@ -10,6 +10,7 @@ int main (int argc, char const *argv[])
     return 0;
   }
   CRaspicamLaser rcl = newCRaspicamLaser(1280, 1024);
+  CRaspicamLaserOpenCamera(rcl);
   if (!CRaspicamLaserAvailable(rcl)) {
     printf("*** Camera not available!\n");
     return -1;
@@ -22,5 +23,6 @@ int main (int argc, char const *argv[])
   }
   else
     printf("*** Error reading from camera!\n");
+  CRaspicamLaserCloseCamera(rcl);
   return 0;
 }

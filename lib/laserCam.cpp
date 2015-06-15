@@ -8,7 +8,8 @@
 #include "laserCam.h"
 
 //#define MARK_LINE printf("*** FILE: %s - LINE: %d\n", __FILE__, __LINE__)
-#define MARK_LINE
+
+#ifdef __cplusplus
 
 RaspicamLaser::RaspicamLaser(int width, int height) {
   _available = false;
@@ -17,12 +18,20 @@ RaspicamLaser::RaspicamLaser(int width, int height) {
   // capture.set(CV_CAP_PROP_BRIGHTNESS, 50);
   // capture.set(CV_CAP_PROP_SATURATION, 80);
   // capture.set(CV_CAP_PROP_FPS, 30);
-  _available = _camera->open();
 }
 
 RaspicamLaser::~RaspicamLaser() {
-  _camera->release();
+  closeCamera();
   delete _camera;
+}
+
+bool RaspicamLaser::openCamera() {
+  _available = _camera->open();
+  return _available;
+}
+
+void RaspicamLaser::closeCamera() {
+  _camera->release();
 }
 
 void RaspicamLaser::setFrameSize(int width, int height) {
@@ -74,6 +83,21 @@ int RaspicamLaser::position(int *x, int *y) {
   return 0;
 }
 
+#endif
+
+
+
+
+
+#pragma mark -
+/*
+              ____   ___       _             __                
+             / ___| |_ _|_ __ | |_ ___ _ __ / _| __ _  ___ ___ 
+            | |      | || '_ \| __/ _ \ '__| |_ / _` |/ __/ _ \
+            | |___   | || | | | ||  __/ |  |  _| (_| | (_|  __/
+             \____| |___|_| |_|\__\___|_|  |_|  \__,_|\___\___|
+                                                               
+*/
 #define RASPICAM_CLASS(o) reinterpret_cast<RaspicamLaser *>(o)
 
 CRaspicamLaser newCRaspicamLaser(int width, int height) {
@@ -87,6 +111,14 @@ void delCRaspicamLaser(CRaspicamLaser rl) {
 //
 // Each public method. Takes an opaque reference to the object
 // that was returned from the above constructor plus the methods parameters.
+int CRaspicamLaserOpenCamera(CRaspicamLaser rl) {
+  return RASPICAM_CLASS(rl)->openCamera() ? 0 : -1;
+}
+
+void CRaspicamLaserCloseCamera(CRaspicamLaser rl) {
+  RASPICAM_CLASS(rl)->closeCamera();
+}
+
 int CRaspicamLaserPosition(CRaspicamLaser rl, int *x, int *y) {
   return RASPICAM_CLASS(rl)->position(x, y);
 }
@@ -99,7 +131,10 @@ void CRaspicamLaserSetFrameSize(CRaspicamLaser rl, int width, int height) {
   RASPICAM_CLASS(rl)->setFrameSize(width, height);
 }
 
-void CRaspicamLaserSaveFrame(CRaspicamLaser rl, const char *cname, int slp) {
+int CRaspicamLaserSaveFrame(CRaspicamLaser rl, const char *cname, int slp) {
+  if (!RASPICAM_CLASS(rl)->available())
+    return -1;
   std::string name = cname;
-  return RASPICAM_CLASS(rl)->saveFrame(name, slp);
+  RASPICAM_CLASS(rl)->saveFrame(name, slp);
+  return 0;
 }

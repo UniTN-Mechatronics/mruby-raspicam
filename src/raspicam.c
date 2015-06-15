@@ -111,6 +111,22 @@ static mrb_value mrb_raspicam_initialize(mrb_state *mrb, mrb_value self) {
   return mrb_nil_value();
 }
 
+static mrb_value mrb_raspicam_open(mrb_state *mrb, mrb_value self) {
+  raspicam_data_s *p_data = NULL;
+  // call utility for unwrapping @data into p_data:
+  mrb_raspicam_get_data(mrb, self, &p_data);
+  CRaspicamLaserOpenCamera(p_data->camera);
+  return self;
+}
+
+static mrb_value mrb_raspicam_close(mrb_state *mrb, mrb_value self) {
+  raspicam_data_s *p_data = NULL;
+  // call utility for unwrapping @data into p_data:
+  mrb_raspicam_get_data(mrb, self, &p_data);
+  CRaspicamLaserCloseCamera(p_data->camera);
+  return mrb_nil_value();
+}
+
 static mrb_value mrb_raspicam_pos(mrb_state *mrb, mrb_value self) {
   raspicam_data_s *p_data = NULL;
   mrb_value ary;
@@ -135,9 +151,11 @@ static mrb_value mrb_raspicam_save(mrb_state *mrb, mrb_value self) {
   mrb_raspicam_get_data(mrb, self, &p_data);
 
   // raspicam with p_data content:
-  CRaspicamLaserSaveFrame(p_data->camera, mrb_string_value_cstr(mrb, &name),
-                          slp);
-  return name;
+  if (0 != CRaspicamLaserSaveFrame(p_data->camera,
+                                   mrb_string_value_cstr(mrb, &name), slp))
+    return mrb_nil_value();
+  else
+    return name;
 }
 
 /* MEMORY INFO */
@@ -153,6 +171,9 @@ void mrb_mruby_raspicam_gem_init(mrb_state *mrb) {
   struct RClass *raspicam, *process;
   raspicam = mrb_define_class(mrb, "RaspiCam", mrb->object_class);
   mrb_define_method(mrb, raspicam, "initialize", mrb_raspicam_initialize,
+                    MRB_ARGS_NONE());
+  mrb_define_method(mrb, raspicam, "open", mrb_raspicam_open, MRB_ARGS_NONE());
+  mrb_define_method(mrb, raspicam, "close", mrb_raspicam_close,
                     MRB_ARGS_NONE());
   mrb_define_method(mrb, raspicam, "position", mrb_raspicam_pos,
                     MRB_ARGS_NONE());
