@@ -13,6 +13,7 @@
 
 RaspicamLaser::RaspicamLaser(int width, int height) {
   _available = false;
+  _rect      = NULL;
   _camera = new raspicam::RaspiCam_Cv();
   _red_thr = 230;
   setFrameSize(width, height);
@@ -20,7 +21,23 @@ RaspicamLaser::RaspicamLaser(int width, int height) {
 
 RaspicamLaser::~RaspicamLaser() {
   closeCamera();
+  delete _rect;
   delete _camera;
+}
+
+void RaspicamLaser::set_rect(int x0, int y0, int x1, int y1) {
+  if (! _rect) {
+    _rect = new rect;
+  }
+  _rect->x0 = x0;
+  _rect->y0 = y0;
+  _rect->x1 = x1;
+  _rect->y1 = y1;
+}
+
+void RaspicamLaser::reset_rect() {
+  delete _rect;
+  _rect = NULL;
 }
 
 bool RaspicamLaser::openCamera() {
@@ -43,6 +60,9 @@ void RaspicamLaser::setFrameSize(int width, int height) {
 }
 
 bool RaspicamLaser::saveFrame(std::string &name) {
+  if (_rect) {
+    cv::rectangle(_lastFrame, cv::Point(_rect->x0, _rect->y0), cv::Point(_rect->x1, _rect->y1), cv::Scalar(0, 255, 0));
+  }
   imwrite(name, _lastFrame);
   return true;
 }
@@ -130,6 +150,14 @@ int CRaspicamLaserOpenCamera(CRaspicamLaser rl) {
 
 void CRaspicamLaserCloseCamera(CRaspicamLaser rl) {
   RASPICAM_CLASS(rl)->closeCamera();
+}
+
+void CRaspicamLaserSetRect(CRaspicamLaser rl, int x0, int y0, int x1, int y1) {
+  RASPICAM_CLASS(rl)->set_rect(x0, y0, x1, y1);
+}
+
+void CRaspicamLaserResetRect(CRaspicamLaser rl) {
+  RASPICAM_CLASS(rl)->reset_rect();
 }
 
 int CRaspicamLaserPosition(CRaspicamLaser rl, int *x, int *y) {

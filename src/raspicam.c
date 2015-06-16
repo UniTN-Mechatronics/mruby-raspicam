@@ -106,6 +106,8 @@ static mrb_value mrb_raspicam_initialize(mrb_state *mrb, mrb_value self) {
   } else if (nargs == 1) {
     height = (mrb_int)((width / 640.0) * 480.0);
   }
+  mrb_iv_set(mrb, self, mrb_intern_lit(mrb, "@width"), mrb_fixnum_value(width));
+  mrb_iv_set(mrb, self, mrb_intern_lit(mrb, "@height"), mrb_fixnum_value(height));
   // Call strcut initializer:
   mrb_raspicam_init(mrb, self, width, height);
   return mrb_nil_value();
@@ -150,6 +152,27 @@ static mrb_value mrb_raspicam_set_red_thr(mrb_state *mrb, mrb_value self) {
   return mrb_fixnum_value(val);
 }
 
+static mrb_value mrb_raspicam_set_rect(mrb_state *mrb, mrb_value self) {
+  raspicam_data_s *p_data = NULL;
+  mrb_int x0, y0, x1, y1;
+  mrb_get_args(mrb, "iiii", &x0, &y0, &x1, &y1);
+  // call utility for unwrapping @data into p_data:
+  mrb_raspicam_get_data(mrb, self, &p_data);
+
+  // raspicam with p_data content:
+  CRaspicamLaserSetRect(p_data->camera, x0, y0, x1, y1);
+  return self;
+}
+
+static mrb_value mrb_raspicam_reset_rect(mrb_state *mrb, mrb_value self) {
+  raspicam_data_s *p_data = NULL;
+  // call utility for unwrapping @data into p_data:
+  mrb_raspicam_get_data(mrb, self, &p_data);
+
+  // raspicam with p_data content:
+  CRaspicamLaserResetRect(p_data->camera);
+  return self;
+}
 
 static mrb_value mrb_raspicam_pos(mrb_state *mrb, mrb_value self) {
   raspicam_data_s *p_data = NULL;
@@ -189,7 +212,7 @@ void mrb_mruby_raspicam_gem_init(mrb_state *mrb) {
   struct RClass *raspicam;
   mrb_define_class(mrb, "RaspicamError", mrb_class_get(mrb, "Exception"));
   raspicam = mrb_define_class(mrb, "RaspiCam", mrb->object_class);
-  
+
   mrb_define_method(mrb, raspicam, "initialize", mrb_raspicam_initialize,
                     MRB_ARGS_OPT(2));
   mrb_define_method(mrb, raspicam, "open", mrb_raspicam_open, MRB_ARGS_NONE());
@@ -199,6 +222,10 @@ void mrb_mruby_raspicam_gem_init(mrb_state *mrb) {
                     MRB_ARGS_NONE());
   mrb_define_method(mrb, raspicam, "red_threshold=", mrb_raspicam_set_red_thr,
                     MRB_ARGS_REQ(1));
+  mrb_define_method(mrb, raspicam, "set_rect", mrb_raspicam_set_rect,
+                    MRB_ARGS_REQ(4));
+  mrb_define_method(mrb, raspicam, "reset_rect", mrb_raspicam_reset_rect,
+                    MRB_ARGS_NONE());
   mrb_define_method(mrb, raspicam, "position", mrb_raspicam_pos,
                     MRB_ARGS_NONE());
   mrb_define_method(mrb, raspicam, "save_image", mrb_raspicam_save,
