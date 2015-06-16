@@ -186,8 +186,8 @@ static mrb_value mrb_raspicam_save(mrb_state *mrb, mrb_value self) {
 }
 
 void mrb_mruby_raspicam_gem_init(mrb_state *mrb) {
-  struct RClass *raspicam, *exc;
-  exc = mrb_define_class(mrb, "RaspicamError", mrb_class_get(mrb, "Exception"));
+  struct RClass *raspicam;
+  mrb_define_class(mrb, "RaspicamError", mrb_class_get(mrb, "Exception"));
   raspicam = mrb_define_class(mrb, "RaspiCam", mrb->object_class);
   
   mrb_define_method(mrb, raspicam, "initialize", mrb_raspicam_initialize,
