@@ -83,41 +83,49 @@ bool RaspicamLaser::position(int *x, int *y, int slp) {
     acquireFrame(slp);
     *x = -1;
     *y = -1;
+    
+    // Frame parameterization
     const int FRAME_DIV = 50;
     int SCALE = 255;
     int square_col_size = ceil ( _lastFrame.cols / FRAME_DIV );
     int square_row_size = ceil ( _lastFrame.rows / FRAME_DIV );
+  
+    // Data for sub_roi brightness and color
     static cv::Mat sub_roi;
     const unsigned int LASER_COLOR = 2;
-    int brightCondition = 0; int circlesCondition = 0;
-    
     cv::Mat channels[3];
     cv::Point pMaxCh;
     cv::Vec3b intensity;
     unsigned int colors[3];
     unsigned int *c = colors;
     
-    std::vector<cv::Vec3f> vecCircles;
-    std::vector<cv::Vec3f>::iterator itrCircles;
+    // Parameters for blob detection, currently the blobs
+    // are filtered out by area
+    cv::SimpleBlobDetector::Params params;
+    params.minDistBetweenBlobs = 100.0f;
+    params.filterByInertia = false;
+    params.filterByConvexity = false;
+    params.filterByColor = false;
+    params.filterByCircularity = false;
+    params.filterByArea = true;
+    params.minArea = 2.0f;
+    params.maxArea = 10.0f;
+    cv::vector<cv::KeyPoint> keypoints;
     
     // Laser detector
+    cv::SimpleBlobDetector blob_detector(params);
     for ( register int row = 0; row < _lastFrame.rows - square_row_size; row += square_row_size ){
         for ( register int col = 0; col < _lastFrame.cols - square_col_size; col +=  square_col_size ){
             sub_roi = _lastFrame ( cv::Rect ( col, row, square_col_size, square_row_size ) );
             cv::split( sub_roi, channels );
             cv::minMaxLoc ( channels[ LASER_COLOR ], NULL, NULL, NULL, &pMaxCh );
-            
             intensity = sub_roi.at < cv::Vec3b > ( pMaxCh.y, pMaxCh.x );
             *( c ) = static_cast < int > ( intensity.val [ 0 ] );
             *( c + 1 ) = static_cast < int > ( intensity.val [ 1 ] );
             *( c + 2 ) = static_cast < int > ( intensity.val [ 2 ] );
-            
             if ( *(c + 2 ) > _red_thr &&  *( c ) < *( c + 2 ) - 20  && *( c + 1 ) < *( c +  2 ) - 20 ){   //230 -20 -20
-                cv::cvtColor ( sub_roi, sub_roi, CV_BGR2GRAY );
-                cv::GaussianBlur( sub_roi, sub_roi, cv::Size(9, 9), 1, 1 );
-                cv::HoughCircles( sub_roi, vecCircles, CV_HOUGH_GRADIENT, 1, ceil (sub_roi.rows / 2.0 ) , 70, 3, 1, 10);
-                
-                if ( vecCircles.size() > 0 ){
+                blob_detector.detect( sub_roi, keypoints);
+                if ( keypoints.size() > 0 ){
                     cv::Point p ( col + pMaxCh.x, row + pMaxCh.y);
                     cv::circle ( _lastFrame, p, square_col_size, cv::Scalar ( 0, 255, 0 ) );
                     *x = (p.x) * SCALE / _lastFrame.cols;
