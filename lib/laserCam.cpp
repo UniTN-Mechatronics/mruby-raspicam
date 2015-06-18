@@ -80,37 +80,52 @@ bool RaspicamLaser::acquireFrame(int slp) {
 bool RaspicamLaser::position(int *x, int *y, int slp) {
   if (!_available)
     return false;
-  const unsigned int RED = 2;
-  unsigned int colors[3];
-  unsigned int *c = colors;
-  int SCALE = 255;
-  int cont = 0;
-  cv::Mat frameOriginalSubROI;
-  cv::Mat channels[3];
-  cv::Point pMaxR;
-  cv::Vec3b intensity;
-
-  // Get frame
-  acquireFrame(slp);
-  *x = -1;
-  *y = -1;
-  for (register int k = 0; k < _lastFrame.rows; k++) {
-    frameOriginalSubROI = _lastFrame(cv::Rect(0, k, _lastFrame.cols, 1));
-    cv::split(frameOriginalSubROI, channels);
-    cv::minMaxLoc(channels[RED], NULL, NULL, NULL, &pMaxR);
-    intensity = frameOriginalSubROI.at<cv::Vec3b>(pMaxR.y, pMaxR.x);
-    *(c) = static_cast<int>(intensity.val[0]);
-    *(c + 1) = static_cast<int>(intensity.val[1]);
-    *(c + 2) = static_cast<int>(intensity.val[2]);
-    if (*(c + 2) > _red_thr && *(c) < *(c + 2) - 15 &&
-        *(c + 1) < *(c + 2) - 20) {
-      cv::Point laser(pMaxR.x, cont);
-      cv::circle(_lastFrame, laser, 50, cv::Scalar(0, 255, 0));
-      *x = (pMaxR.x) * SCALE / _lastFrame.cols;
-      *y = (_lastFrame.rows - cont) * SCALE / _lastFrame.rows;
+    acquireFrame(slp);
+    *x = -1;
+    *y = -1;
+    const int FRAME_DIV = 50;
+    int SCALE = 255;
+    int square_col_size = ceil ( _lastFrame.cols / FRAME_DIV );
+    int square_row_size = ceil ( _lastFrame.rows / FRAME_DIV );
+    static cv::Mat sub_roi;
+    const unsigned int LASER_COLOR = 2;
+    int brightCondition = 0; int circlesCondition = 0;
+    
+    cv::Mat channels[3];
+    cv::Point pMaxCh;
+    cv::Vec3b intensity;
+    unsigned int colors[3];
+    unsigned int *c = colors;
+    
+    std::vector<cv::Vec3f> vecCircles;
+    std::vector<cv::Vec3f>::iterator itrCircles;
+    
+    // Laser detector
+    for ( register int row = 0; row < _lastFrame.rows - square_row_size; row += square_row_size ){
+        for ( register int col = 0; col < _lastFrame.cols - square_col_size; col +=  square_col_size ){
+            sub_roi = _lastFrame ( cv::Rect ( col, row, square_col_size, square_row_size ) );
+            cv::split( sub_roi, channels );
+            cv::minMaxLoc ( channels[ LASER_COLOR ], NULL, NULL, NULL, &pMaxCh );
+            
+            intensity = sub_roi.at < cv::Vec3b > ( pMaxCh.y, pMaxCh.x );
+            *( c ) = static_cast < int > ( intensity.val [ 0 ] );
+            *( c + 1 ) = static_cast < int > ( intensity.val [ 1 ] );
+            *( c + 2 ) = static_cast < int > ( intensity.val [ 2 ] );
+            
+            if ( *(c + 2 ) > _red_thr &&  *( c ) < *( c + 2 ) - 20  && *( c + 1 ) < *( c +  2 ) - 20 ){   //230 -20 -20
+                cv::cvtColor ( sub_roi, sub_roi, CV_BGR2GRAY );
+                cv::GaussianBlur( sub_roi, sub_roi, cv::Size(9, 9), 1, 1 );
+                cv::HoughCircles( sub_roi, vecCircles, CV_HOUGH_GRADIENT, 1, ceil (sub_roi.rows / 2.0 ) , 70, 3, 1, 10);
+                
+                if ( vecCircles.size() > 0 ){
+                    cv::Point p ( col + pMaxCh.x, row + pMaxCh.y);
+                    cv::circle ( _lastFrame, p, square_col_size, cv::Scalar ( 0, 255, 0 ) );
+                    *x = (p.x) * SCALE / _lastFrame.cols;
+                    *y = ( _lastFrame.rows - ( p.y )) * SCALE / _lastFrame.rows;
+                }
+            }
+        }
     }
-    cont++;
-  }
   if (*x == -1 || *y == -1)
     return false;
   return true;
