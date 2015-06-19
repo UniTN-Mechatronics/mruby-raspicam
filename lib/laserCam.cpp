@@ -85,12 +85,13 @@ bool RaspicamLaser::position(int *x, int *y, int slp) {
     *y = -1;
     
     // Frame parameterization
-    const int FRAME_DIV = 50;
+    const int FRAME_DIV = 50;   // Image division, 50 is a good value
     int SCALE = 255;
     int square_col_size = ceil ( _lastFrame.cols / FRAME_DIV );
     int square_row_size = ceil ( _lastFrame.rows / FRAME_DIV );
   
     // Data for sub_roi brightness and color
+    int SUB_C = 20;
     static cv::Mat sub_roi;
     const unsigned int LASER_COLOR = 2;
     cv::Mat channels[3];
@@ -106,12 +107,35 @@ bool RaspicamLaser::position(int *x, int *y, int slp) {
     params.filterByInertia = false;
     params.filterByConvexity = false;
     params.filterByColor = false;
-    params.filterByCircularity = false;
+    params.filterByCircularity = true;
     params.filterByArea = true;
     params.minArea = 2.0f;
-    params.maxArea = 10.0f;
+    params.maxArea = 15.0f;   // Maybe you need to improve the maxArea to 30-40
+    params.minCircularity = 0.5;
+    params.maxCircularity = 1;  
+    params.minThreshold = 10;
+    params.maxThreshold = 200;
     cv::vector<cv::KeyPoint> keypoints;
     
+    // Preprocessing: uncomment only if there are white
+    // spots light. This piece of code remove the white
+    // zone of the original image, so if you save
+    // the image after the elaboration, the white zone
+    // of the image will be black. These OpenCV functions
+    // kills the framerate.
+    /*
+    cv::Mat hsv;
+    cv::Mat mask;
+    cv::cvtColor ( frame, hsv, CV_BGR2HSV );
+    cv::inRange ( hsv, cv::Scalar(0,0,230 ), cv::Scalar(255,30,255), mask );
+    cv::bitwise_not ( mask, mask );
+    cv::split ( frame, channels );
+    cv::bitwise_and ( channels[2], mask, channels[2] );
+    cv::bitwise_and ( channels[1], mask, channels[1] );
+    cv::bitwise_and ( channels[0], mask, channels[0] );
+    cv::merge ( channels, 3 ,frame );
+    */
+     
     // Laser detector
     cv::SimpleBlobDetector blob_detector(params);
     for ( register int row = 0; row < _lastFrame.rows - square_row_size; row += square_row_size ){
@@ -123,7 +147,7 @@ bool RaspicamLaser::position(int *x, int *y, int slp) {
             *( c ) = static_cast < int > ( intensity.val [ 0 ] );
             *( c + 1 ) = static_cast < int > ( intensity.val [ 1 ] );
             *( c + 2 ) = static_cast < int > ( intensity.val [ 2 ] );
-            if ( *(c + 2 ) > _red_thr &&  *( c ) < *( c + 2 ) - 20  && *( c + 1 ) < *( c +  2 ) - 20 ){   //230 -20 -20
+            if ( *(c + 2 ) > _red_thr &&  *( c ) < *( c + 2 ) - SUB_C  && *( c + 1 ) < *( c +  2 ) - SUB_C ){   //230 -20 -20
                 blob_detector.detect( sub_roi, keypoints);
                 if ( keypoints.size() > 0 ){
                     cv::Point p ( col + pMaxCh.x, row + pMaxCh.y);
