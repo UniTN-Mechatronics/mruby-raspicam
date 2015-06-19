@@ -112,7 +112,7 @@ bool RaspicamLaser::position(int *x, int *y, int slp) {
     params.minArea = 2.0f;
     params.maxArea = 15.0f;   // Maybe you need to improve the maxArea to 30-40
     params.minCircularity = 0.5;
-    params.maxCircularity = 1;  
+    params.maxCircularity = 1;
     params.minThreshold = 10;
     params.maxThreshold = 200;
     cv::vector<cv::KeyPoint> keypoints;
@@ -126,14 +126,14 @@ bool RaspicamLaser::position(int *x, int *y, int slp) {
     /*
     cv::Mat hsv;
     cv::Mat mask;
-    cv::cvtColor ( frame, hsv, CV_BGR2HSV );
+    cv::cvtColor ( _lastFrame, hsv, CV_BGR2HSV );
     cv::inRange ( hsv, cv::Scalar(0,0,230 ), cv::Scalar(255,30,255), mask );
     cv::bitwise_not ( mask, mask );
-    cv::split ( frame, channels );
+    cv::split ( _lastFrame, channels );
     cv::bitwise_and ( channels[2], mask, channels[2] );
     cv::bitwise_and ( channels[1], mask, channels[1] );
     cv::bitwise_and ( channels[0], mask, channels[0] );
-    cv::merge ( channels, 3 ,frame );
+    cv::merge ( channels, 3 ,_lastFrame );
     */
      
     // Laser detector
